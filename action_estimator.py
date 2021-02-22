@@ -11,6 +11,56 @@ from modules.parse_poses import parse_poses
 
 from pathlib import Path
 
+#helper functions 
+
+def check_phone_left(pose,canvas_3d):
+    #If distance between wrist and ear smaller than distance between should and ear 
+    # AND wrist is above shoulder
+    # ear_to_shoulder_distance can be replaced by a certain heurisitic.
+    #ear_to_shoulder_distance = math.sqrt(pow(pose[R_SHO][0]-pose[R_EAR][0],2)+pow(pose[R_SHO][1]-pose[R_EAR][1],2)+pow(pose[R_SHO][2]-pose[R_EAR][2],2))
+    # ear_to_wrist_distance = math.sqrt(pow(pose[R_WRI][0]-pose[R_EAR][0],2)+pow(pose[R_WRI][1]-pose[R_EAR][1],2)+pow(pose[R_WRI][2]-pose[R_EAR][2],2))
+    # if 50>ear_to_wrist_distance and pose[R_WRI][2]>pose[R_SHO][2]:
+        # print("talking on the phone")
+    #l_ear_to_shoulder_distance = math.sqrt(pow(pose[L_SHO][0]-pose[L_EAR][0],2)+pow(pose[L_SHO][1]-pose[L_EAR][1],2)+pow(pose[L_SHO][2]-pose[L_EAR][2],2))
+    l_ear_to_wrist_distance = math.sqrt(pow(pose[L_WRI][0]-pose[L_EAR][0],2)+pow(pose[L_WRI][1]-pose[L_EAR][1],2)+pow(pose[L_WRI][2]-pose[L_EAR][2],2))
+    #print(l_ear_to_wrist_distance)
+    if  50 > l_ear_to_wrist_distance and pose[L_WRI][2]>pose[L_SHO][2]:
+        cv2.putText(canvas_3d, "A terrible leftie is talking on the phone" ,
+            (40, 80), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255))
+        # print("A leftie is talking on the phone")
+    #print(pose)
+def avg_2_pose(pose1, pose2):
+    return [(pose1[0] + pose2[0]) / 2, (pose1[1] + pose2[1]) / 2, (pose1[2] + pose2[2]) / 2]
+
+def check_lying_down(pose, canvas_3d):
+    # distance of ankles to head in z axis is low 
+    ankle_median_pos = avg_2_pose(pose[L_ANK], pose[R_ANK])
+    
+    print(pose[NECK][2] - ankle_median_pos[2])
+    if pose[NECK][2] - ankle_median_pos[2] < 60 and pose[NECK][2] - ankle_median_pos[2] != 0 :
+         cv2.putText(canvas_3d, "Lying down" ,
+            (40, 80), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255))
+
+def check_standing(pose, canvas_3d):
+    # distance of ankles to head in z axis is high 
+    ankle_median_pos = avg_2_pose(pose[L_ANK], pose[R_ANK])
+    
+    print(pose[NECK][2] - ankle_median_pos[2])
+    if pose[NECK][2] - ankle_median_pos[2] > 100 and pose[NECK][2] - ankle_median_pos[2] != 0 :
+         cv2.putText(canvas_3d, "Standing" ,
+            (40, 120), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255))
+
+def check_waving_right(pose, canvas_3d):
+    # print(pose[R_WRI][2] - pose[NECK][2] ) 
+    if pose[R_WRI][2] - pose[NECK][2]:
+        cv2.putText(canvas_3d, "Wave right hand",
+        (40, 80), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255))
+        
+    
+    
+    
+
+
 kpt_names = ['neck', 'nose',
                 'l_sho', 'l_elb', 'l_wri', 'l_hip', 'l_knee', 'l_ank',
                 'r_sho', 'r_elb', 'r_wri', 'r_hip', 'r_knee', 'r_ank',
@@ -40,13 +90,13 @@ L_EAR = 18
 
 
 
-fileName = 'sample3'
+fileName = 'waving_4'
 Videofile = Path(fileName).with_suffix('.mp4')
 posesFile = Path(fileName).with_suffix('.npy')
 
+print(posesFile)
 if __name__ == '__main__':
-    with open(posesFile, 'rb') as f:
-        all_poses = np.load(f)
+    all_poses = np.load(posesFile, allow_pickle=True)
     canvas_3d = np.zeros((720, 1280, 3), dtype=np.uint8)
     plotter = Plotter3d(canvas_3d.shape[:2])
     canvas_3d_window_name = 'Canvas 3D'
@@ -87,25 +137,13 @@ if __name__ == '__main__':
             # 
             # Pose and action estimation area.
             
-             
+            check_lying_down(pose,canvas_3d) 
 
-            #If distance between wrist and ear smaller than distance between should and ear 
-            # AND wrist is above shoulder
-            # ear_to_shoulder_distance can be replaced by a certain heurisitic.
-            #ear_to_shoulder_distance = math.sqrt(pow(pose[R_SHO][0]-pose[R_EAR][0],2)+pow(pose[R_SHO][1]-pose[R_EAR][1],2)+pow(pose[R_SHO][2]-pose[R_EAR][2],2))
-            ear_to_wrist_distance = math.sqrt(pow(pose[R_WRI][0]-pose[R_EAR][0],2)+pow(pose[R_WRI][1]-pose[R_EAR][1],2)+pow(pose[R_WRI][2]-pose[R_EAR][2],2))
-            if 50>ear_to_wrist_distance and pose[R_WRI][2]>pose[R_SHO][2]:
-                print("talking on the phone")
-            #l_ear_to_shoulder_distance = math.sqrt(pow(pose[L_SHO][0]-pose[L_EAR][0],2)+pow(pose[L_SHO][1]-pose[L_EAR][1],2)+pow(pose[L_SHO][2]-pose[L_EAR][2],2))
-            l_ear_to_wrist_distance = math.sqrt(pow(pose[L_WRI][0]-pose[L_EAR][0],2)+pow(pose[L_WRI][1]-pose[L_EAR][1],2)+pow(pose[L_WRI][2]-pose[L_EAR][2],2))
-            print(l_ear_to_wrist_distance)
-            if  50 > l_ear_to_wrist_distance and pose[L_WRI][2]>pose[L_SHO][2]:
-                cv2.putText(canvas_3d, "A terrible leftie is talking on the phone" ,
-                    (40, 80), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255))
-                print("A leftie is talking on the phone")
-            print(pose)
+            check_phone_left(pose, canvas_3d)
+            
+            check_standing(pose,canvas_3d)
                         
-
+            check_waving_right(pose,canvas_3d)
         
         
         
